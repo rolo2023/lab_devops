@@ -1,8 +1,5 @@
 FROM php:7.1.17-apache
-LABEL maintainer="Jaivic"
-
 RUN a2enmod rewrite
-
 RUN apt-get update && apt-get install -y \
         zlib1g-dev \
         libicu-dev \
