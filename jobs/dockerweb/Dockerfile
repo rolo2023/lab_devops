@@ -11,6 +11,6 @@ RUN apt-get update && apt-get install -y \
         && docker-php-ext-configure pdo_mysql --with-pdo-mysql=mysqlnd \
         && apt-get install vim -y
 
-COPY  . /var/www/html/
+COPY  index.html /var/www/html/
 WORKDIR /var/www/html/
 
