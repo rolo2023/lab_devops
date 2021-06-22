@@ -1,4 +1,3 @@
-
 pipeline {
   agent any
  parameters {
@@ -15,7 +14,7 @@ pipeline {
 
             when {
                 expression { 
-                    DOCKER_EXIST = sh(returnStdout: true, script: 'echo "$(docker ps -q --filter name=${name_final})"').trim()
+                    DOCKER_EXIST = sh(returnStdout: true, script: 'echo "$(docker ps -q --filter name=${"name_final"})"').trim()
                     return  DOCKER_EXIST != '' 
                 }
             }
@@ -23,6 +22,7 @@ pipeline {
                 script{
                     sh ''' 
                          docker stop ${name_final}
+                         docker rm ${name_final}
                     '''
                     }
                     
