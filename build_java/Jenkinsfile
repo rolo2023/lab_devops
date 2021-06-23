@@ -1,5 +1,7 @@
 pipeline {
-    agent { label 'maven:latest'}
+   agent {docker
+							{ image 'maven:latest'}
+							}
 
         stages {
  
