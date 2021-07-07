@@ -1,0 +1,43 @@
+package workflow.vars
+
+import org.junit.Before
+import org.junit.Test
+import org.junit.Ignore
+import com.lesfurets.jenkins.unit.BasePipelineTest
+
+import static org.assertj.core.api.Assertions.*
+
+
+class #MODULE_NAME#Test extends BaseVarsTest {
+
+    void setPathToScript() {
+        this.pathToScript = "vars/#MODULE_NAME#.groovy"
+    }
+
+    @Override
+    @Before
+    void setUp() throws Exception {
+        super.setUp()
+    }
+
+    @Test
+    void "'#MODULE_NAME#' can be called from a Step"() {
+        // Given some configuration
+        Map stepParams = [
+          param1: 1,
+          param2: 2
+        ]
+
+        // When I call the '#MODULE_NAME#' module from a step
+        systemUnderTest.fromStep(stepParams)
+        printCallStack()
+
+        // Then there should be no errors
+        assertThat(helper.callStack.findAll { it.methodName == 'error' }.size()).isEqualTo(0)
+    }
+
+    @Test
+    void "another test"() {
+      fail("Not done")
+    }
+}

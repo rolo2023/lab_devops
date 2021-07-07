@@ -1,0 +1,15 @@
+#!/bin/sh
+### This script behaves as dmcli launched from dmwrapper
+### Currently it only exposes the parameters
+
+echo "
+Dimensions was called with the following parameters:
+$@
+"
+
+if [ -f config.json ]; then
+    echo "JSON file found. Print contents:"
+    cat config.json
+fi
+
+exit 0

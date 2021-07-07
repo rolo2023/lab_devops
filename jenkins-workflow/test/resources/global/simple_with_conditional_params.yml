@@ -1,0 +1,33 @@
+---
+verbosity: 2
+
+# One of each parameter
+form:
+  - id: maven_build_command
+    when_branch:
+      - develop
+      - master
+    type: string
+    default: 'clean install versions:set -DnewVersion={{ artifact.version }}'
+    default_when_false: 'clean install versions:set -DnewVersion=SNAPSHOT'
+    description: |
+      Maven Build command
+
+  - id: choice_sample
+    type: choice
+    choices:
+      - es
+      - ar
+      - mx
+
+stages:
+  build:
+    steps: []
+
+  test: {}
+
+  publish:
+    steps: []
+
+  deploy:
+    steps: []

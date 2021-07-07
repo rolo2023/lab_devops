@@ -1,0 +1,17 @@
+@Library ('jenkins-workflow@master') _
+
+spring {
+    /*OPT*/  verbosity = 1 // 0 (error/warnings), 1 info, 2 debug
+    /*MUST*/ country = 'global'
+    /*MUST*/ group = 'generic' // Escenia, netcash...
+    /*MUST*/ uuaa = 'bnet' // component's id; mainly its uuaa
+    build = [
+        /*MUST*/ node_label: 'node-agent-label', // Jenkin's node where the build will be taken
+        /*MUST*/ artifact_path: '.', // relative path from WORKSPACE where the artifact will be stored
+        /*MUST*/ artifact_file: 'uuaa.ear', // artifact's name. It accepts the placeholder {{version}}
+        /*MUST*/ maven_settings: 'env:ARTIFACTORY_CREDENTIALS', // - key:value tuples
+                                                                // - env:id if node has a settings.xml with credentials variable
+                                                                // - file:id if node has a settings.xml using Jenkins
+        /*MUST*/ maven_args: '-P mavenProfile' // maven arguments. Empty is allowed
+    ]
+}

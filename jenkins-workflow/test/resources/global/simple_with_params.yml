@@ -1,0 +1,33 @@
+---
+verbosity: 2
+
+# One of each parameter
+form:
+  - id: maven_build_command
+    type: string
+    default: 'clean install versions:set -DnewVersion=1.15.3'
+    description: |
+      Maven Build command
+
+  - id: sample_flag
+    type: boolean
+    default: false
+
+  - id: choice_sample
+    type: choice
+    choices:
+      - es
+      - ar
+      - mx
+
+stages:
+  build:
+    steps: []
+
+  test: {}
+
+  publish:
+    steps: []
+
+  deploy:
+    steps: []

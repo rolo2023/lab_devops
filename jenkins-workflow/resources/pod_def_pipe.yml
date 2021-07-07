@@ -1,0 +1,21 @@
+apiVersion: "v1"
+kind: "Pod"
+spec:
+  securityContext:
+    runAsUser: 1000
+    fsGroup: 1000
+  imagePullSecrets:
+    - name: "registrypullsecret"
+  containers:
+    - name: "maven-builder"
+      image: "globaldevtools.bbva.com:5000/piaas/mvn-3.5.0-jdk-8:1.0.0"
+      tty: true
+      resources:
+        limits:
+          memory: 2Gi
+          cpu: 2
+        requests:
+          memory: 1Gi
+          cpu: 1
+      command:
+        - cat

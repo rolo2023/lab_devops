@@ -1,0 +1,88 @@
+verbosity: 1
+architecture: spring
+
+modules:
+  vtrack:
+    api: v0
+    debug: no
+    url: dev-etherification-apis-alb-1168521633.eu-west-1.elb.amazonaws.com:8085
+
+  artifactory:
+    server_id: artifactory bbva
+    credentialsId: "spring_{{country}}_{{group}}_artifactory_token"
+
+  git:
+    credentialsId: "spring_{{country}}_{{group}}_git_rsa"
+
+  bitbucket:
+    url: https://globaldevtools.bbva.com/bitbucket
+    credentialsId: "spring_{{country}}_{{group}}_git_token"
+    credential_type: userpass
+
+# Store module
+store:
+  module: artifactory
+  upload: 'arq-canales-ar-mvn'
+  file:
+    path: '.'
+    name: "{{uuaa}}-{{version}}.zip"
+  release:
+    any:
+      name: 'SNAPSHOT'
+      upload: no
+    feature:
+      name: 'SNAPSHOT-{{commit}}'
+      upload: no
+    PR:
+      name: 'SNAPSHOT-{{commit}}'
+      upload: 'snapshots'
+    develop:
+      name: 'SNAPSHOT'
+      upload: 'releases'
+    master:
+      name: '{{version}}'
+      upload: 'releases'
+
+# Sonar configuration
+sonar:
+  enabled: no
+  parameters: ''
+
+
+# Stages configuration
+stages:
+  prepare:
+    module: vtrack
+  build:
+    node_label: 'openjdk8-mvn-3.5'
+    # stash: Array de archivos que se quieren intercambiar entre stages. Por defecto es false
+    # - files: '**/*.zip' ## Expresión ANT de archivos que se quieren usar entre stages
+    #   id: 'zipfiles' ## Identificador para el uso de unstash
+    stash: no
+    keep: # Archivos que se mantienen en Jenkins
+      branches: [ 'feature' ] # Sólo afecta a estas ramas
+      files: '*.zip' # Expresión ANT de los archivos que se quieren guardar
+      greedy: no # Si no se encuentran archivos según la expresión anterior, copiar todo el directorio
+    environment:
+      maven_settings: "file: spring_{{country}}_{{group}}_settings_file"
+
+    steps:
+      - label: 'Build with maven'
+        bin: mvn
+        run: 'install versions:set -DnewVersion={{version}}'
+        environment:
+          java_tool: '{{java}}'
+          maven_tool: '{{maven}}'
+      - label: 'Packaging'
+        bin: sh
+        run: 'zip {{uuaa}}-{{version}}.zip target/JupiterJars/*'
+      - label: 'List dir'
+        bin: sh
+        run: 'ls -larth'
+
+  test:
+    node_label: ''
+    when: false
+  end:
+    environment: {}
+    steps: no

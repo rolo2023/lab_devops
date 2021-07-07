@@ -1,0 +1,47 @@
+import globals.Helpers
+
+/**
+ * #MODULE_NAME#
+ *
+ * TODO: description
+ *
+ * Mandatory params:
+ * -
+ * -
+ */
+def call(Map map){
+
+  if (!validate(map)) {
+    error "#MODULE_NAME# :: input parameter validation failed for ${map}"
+    return
+  }
+
+  Helpers.log.debug("TO DO")
+}
+
+/**
+ * Checks if all the conditions needed in order to execute #MODULE_NAME#
+ *  are valid.
+ * This should include input parameter validation, user/group permissions,
+ *  mandatory plugins are present, etc...
+ *
+ * @param config Map with all the entries sent to the module in the
+ *              'with_params' section of the configuration
+ */
+Boolean validate(Map config) {
+  // TODO - validate
+  return true
+}
+
+/**
+ * When called from within a step, this will be invoked AUTOMATICALLY.
+ * Use it to massage parameters before sending them to the 'call' method
+ *
+ * @param stepArgs branch dependent parameters
+ */
+def fromStep(Map stepArgs) {
+  call(stepArgs)
+}
+
+//* Used during testing to return a callable script
+return this

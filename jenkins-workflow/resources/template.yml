@@ -1,0 +1,189 @@
+---
+verbosity: 1
+environment: {}
+branching_model: ''  # either 'release', 'norelease', 'none' or 'auto'. Defaults to 'auto' if empty
+
+# Empty parameters list, by default
+form: []
+
+modules:
+
+  # Application MUST define country and owners MINIMUM, check module documentation
+  samuel:
+    enabled: false
+    country: ''
+    owners: []
+
+  git:
+    credentialsId: bot-globaldevops-pro-ssh
+    # Por defecto en la construcción de las ramas features se hace un merge desde la rama develop
+    # con este parámetro podemos deshabilitar este comportamiento
+    mergeDevelop: true
+
+  bitbucket:
+    url: https://globaldevtools.bbva.com/bitbucket
+    credentialsId: "spring_{{country}}_{{group}}_bitbucket_token"
+    credential_type: userpass
+
+  vtrack:
+    # If unset, Vtrack will not be used. This is NOT ideal, but is the default case
+    enabled: no
+
+    # If set, Vtrack exceptions will not break your build
+    should_ignore_error: no
+
+    # You should not change this, unless you know what you are doing
+    base_url: 'https://vtrack.central.platform.bbva.com'
+
+    # If set, we'll point to Vtrack in the lab-01 region
+    debug: no
+
+    # These will be retrieved via platform or https://pkiglobal-ra.live.es.nextgen.igrupobbva/
+    # Make sure they work in the lab-01 region when debugging!
+    ether_certificate: 'vtrack_ether_certificate'
+    ether_key: 'vtrack_ether_key'
+
+    # If set here, it will be used, along with your country, to retrieve namespace
+    # NOTE: Overrides global UUAA setting, to be deprecated
+    uuaa: ''
+
+    # If you do not have an UUAA we will write in this namespace -assuming your credentials have write access
+    # DO NOT SET THIS VALUE if you have an UUAA
+    namespace:  ''
+
+    # One of 'GLO', 'ESP', 'MEX', 'PER', 'COL', 'USA', 'ARG', 'CHL', 'PRY', 'PRT', 'TUR', 'URY', 'VEN'
+    country: 'ESP'
+
+    # Usually 'spring.r1', 'nacar.r1' or 'generic', check Vtrack API for the full list
+    architecture: 'generic'
+
+  artifactory:
+    server_id: globaldevtools
+    credentialsId: "spring_{{country}}_{{group}}_artifactory_token"
+    credential_type: userpass
+
+  ephemerals:
+    enabled: false
+    test_job: 'Herramientas Testing/MAG TEST 2/mag-test/master'
+    mirroring_job: 'Herramientas Testing/MAG TEST 2/escenia-mirroring/master'
+    enabled_branches: [ 'PR', 'develop', 'master' ]
+    deploy_zip_branches: [ 'develop', 'master' ]
+    params: {}
+    skip_errors: no
+
+## Configuración de almacén de artefactos.
+store:
+  module: artifactory
+  context: '{{group}}-{{country}}-mvn'
+  virtual: '' # Por si el repositorio virtual difiere de la nomenclatura para releases-snapshots
+  file: # Artefacto que se publica/despliega
+    path: '.' # Ubicación. Si no se especifica abspath (/) la búsqueda comienza en el workspace
+    name: "{{uuaa}}-{{ artifact.version }}.zip" # Nombre del artefacto
+  release: # Qué ramas publicarán un artefacto, con qué sufijo y en qué sub-repositorio (basado en store.upload)
+    any:
+      name: 'SNAPSHOT-{{commit}}'
+      suffix: 'snapshots'
+      upload: no
+    develop:
+      name: 'SNAPSHOT'
+      suffix: 'releases'
+      upload: yes
+    master:
+      name: '{{ repo.version }}'
+      suffix: 'releases'
+      upload: yes
+
+## Stages basados en CI/CD
+stages:
+
+  ## Fase de BUILD. Realiza la construcción, TAG y publicación del artefacto
+  build:
+    node_label: ''
+    environment: {}
+
+    ## stash: Array de archivos que se quieren intercambiar entre stages. Por defecto es false
+    ## - files: '**/*.zip' ## Expresión ANT de archivos que se quieren usar entre stages
+    ##   id: 'zipfiles' ## Identificador para el uso de unstash
+    stash: no
+    keep: ## Archivos que se mantienen en Jenkins
+      branches: [ 'master' ] ## Sólo afecta a estas ramas
+      files: '**/*.*' ## Expresión ANT de los archivos que se quieren guardar
+      greedy: no ## Si no se encuentran archivos según la expresión anterior, copiar todo el directorio
+
+    ## Pasos para hacer la construcción del artefacto
+    steps:
+      - label: 'Build with maven'
+        use: 'maven'
+        with_params:
+          maven_settings: 'file: settings_spring'
+          goal: 'clean install versions:set -DnewVersion={{ repo.version }}'
+          with_cachelo:
+            key: '{{ uuaa }}-maven-cache'
+            paths: ["{{ env.WORKSPACE }}/.m2"]
+
+      - use: 'wSonar'
+        when: never
+        with_params:
+          parameters: ''
+          qualityGate: null
+          qualityProfile: null
+          waitForQualityGate: false
+
+
+  publish:
+    environment: {}
+    steps:
+      - use: 'chimera'
+        when: never  # Keep like this until you install the chimera credentials in your agent
+        with_params:
+          chimeraCredentialsId: 'chimera-work'
+          chimeraEnvName: 'work'
+      - use: 'curl'
+        when_branch: ['feature/*', 'develop', 'release', 'master']
+        with_params:
+          credentials: "spring_{{country}}_{{group}}_artifactory_token"
+          action: put
+          url: "{{release.urlUpload}}/{{release.filePath}}"
+          localFile: "{{artifact}}"
+
+  ## Fase de TEST (normalmente tests de aceptación, regresión, smoke, etc)
+  test: {}
+
+  deploy:
+    steps: []
+
+  ## Fase de FIN de pipeline. Útil para imprimir mensajes en consola, enviar un correo, etc...
+  end:
+    always:
+      - use: log
+        with_params:
+          message: 'This message is always shown'
+          level: DEBUG
+    error:
+      - use: log
+        with_params:
+          message: 'An error has happened'
+          level: WARNING
+      - use: email
+    success:
+      - use: log
+        with_params:
+          message: 'Only shown when the pipeline has ran successfully'
+    changed:
+      - use: log
+        with_params:
+          message: "Build result changed from last build!"
+          level: DEBUG
+    fixed:
+      - use: log
+        with_params:
+          message: "Build fixed!!"
+          level: INFO
+      - use: email
+        with_params:
+          title: "Congratulations, {{ repo.slug }} has been fixed!"
+          body: |
+            Last build of  building {{ repo.slug }}@{{ repo.branch }} has fixed previous errors.
+            Check results here: : {{ env.BUILD_URL }}
+
+

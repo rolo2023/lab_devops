@@ -1,0 +1,19 @@
+*.orig
+.gradle
+.idea
+.classpath
+.project
+.settings
+.DS_Store
+bin/
+build/
+out/
+*.iml
+gradle.properties
+stale_outputs_checked
+
+# vcode
+.classpath
+.project
+.settings/
+bin/

@@ -1,0 +1,46 @@
+verbosity: 1
+architecture: spring
+
+## Configuración de módulos vacía, implica que reusamos la template por defecto
+modules: {}
+
+## Stages basados en CI/CD
+stages:
+
+  build:
+    node_label: ''
+    stash: no
+    keep: no
+    environment:
+      java_tool: "{{java}}"
+      maven_tool: "{{maven}}"
+      maven_settings: env
+      maven_args: ''
+
+    steps:
+      - label: 'Build with maven'
+        bin: mvn
+        run: "clean install versions:set -DnewVersion={{version}}"
+
+  publish:
+    steps:
+      - use: maven
+        when_branch: ['develop', 'release', 'master']
+        with_params:
+          goal: deploy
+
+  sonar:
+    when: never
+
+  test:
+    when: never
+
+  deploy:
+    node_label: ''
+    environment: {}
+    when: never
+    steps: []
+
+  end:
+    environment: {}
+    when: never

@@ -1,0 +1,9 @@
+applications:
+ -  applicationRepo: app_dummy
+    authTeam: mail@bbva.com
+    components:
+    - name: appear.ear
+      hostname: server_was_test_1
+      artifact: appear.ear
+      serverGroup: server-group-dummy
+      contexRoot: appear.ear

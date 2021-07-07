@@ -1,0 +1,38 @@
+verbosity: 1
+architecture: spring
+
+modules:
+
+  artifactory:
+    server_id: artifactory_global
+
+  bitbucket:
+    credentialsId: TOKEN_API_BB
+    credential_type: string
+
+# Stages configuration
+stages:
+  sonar:
+    enabled: yes
+    parameters: "-Dsonar.projectName='ENET' -Dsonar.projectKey='BBVACONC:ENET' -Dsonar.java.binaries=. -Dsonar.sourceEncoding=ISO8859_1 -Dsonar.sources=. -Dsonar.inclusions=**/*.java"
+
+  build:
+    node_label: 'co-openjdk-mvn-sonarscanner'
+    stash: no
+    keep_artifacts_in_workspace: [ 'develop', 'master' ]
+    environment:
+      java_tool: "{{java}}"
+      maven_tool: "{{maven}}"
+      maven_settings:  "file: spring_{{country}}_{{group}}_settings_file"
+    steps:
+      - label: 'Compiling enet'
+        bin: sh
+        run:
+        resource: "co/netcash/build.sh"
+        environment:
+          PACKAGE: "{{artifact}}"
+        credentials:
+          - type: rsa
+            name: 'spring_{{country}}_{{group}}_git_rsa'
+            variable: SSHKEY
+

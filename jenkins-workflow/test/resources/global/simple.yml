@@ -1,0 +1,25 @@
+---
+verbosity: 1
+modules:
+  bitbucket:
+    # Stolen
+    credentialsId: "spring_es_escenia_bitbucket_token"
+
+  artifactory:
+    # Stolen
+    credentialsId: "spring_es_escenia_artifactory_token"
+
+# simplest possible pipeline: do nothing
+stages:
+  build:
+    steps: []
+
+  test:
+    when: never
+
+  publish:
+    steps: []
+
+  deploy:
+    steps: []
+

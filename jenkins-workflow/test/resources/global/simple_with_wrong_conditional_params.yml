@@ -1,0 +1,25 @@
+---
+verbosity: 2
+
+# This one should fail, it has no alternative condition
+form:
+  - id: maven_build_command
+    when_branch:
+      - develop
+      - master
+    type: string
+    default: 'clean install versions:set -DnewVersion={{ artifact.version }}'
+    description: |
+      Maven Build command
+
+stages:
+  build:
+    steps: []
+
+  test: {}
+
+  publish:
+    steps: []
+
+  deploy:
+    steps: []

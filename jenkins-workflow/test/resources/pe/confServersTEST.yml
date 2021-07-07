@@ -1,0 +1,7 @@
+servers:
+ - hostname: server_was_test_1
+   ip: 192.168.1.2
+   ssh_pk_id: pe-jboss-test
+   ssh_user: devops
+   server_id: server_test_dummy
+   server: jboss

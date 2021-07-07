@@ -1,0 +1,72 @@
+verbosity: 1
+architecture: spring
+
+modules:
+  artifactory:
+    server_id: artifactoryServer
+
+# Custom artifactory storing config
+store:
+  release:
+    feature:
+      name: 'SNAPSHOT-{{branch}}-{{commit}}'
+      suffix: 'snapshots'
+      upload: yes
+    hotfix:
+      name: 'SNAPSHOT-{{branch}}-{{commit}}'
+      suffix: 'snapshots'
+      upload: yes
+    develop:
+      name: 'SNAPSHOT'
+      suffix: 'releases'
+      upload: yes
+    master:
+      name: "{{version}}"
+      suffix: 'releases'
+      upload: yes
+    PR:
+      name: "SNAPSHOT-{{commit}}"
+      suffix: 'snapshots'
+      upload: yes
+
+# Stages configuration
+stages:
+
+  prepare:
+    model: norelease
+    module: vtrack
+
+  sonar:
+    enabled: true
+    parameters: '-Dsonar.sources=**/src -Dsonar.java.binaries=. -Dsonar.tests=**/src'
+
+  build:
+    node_label: ldbad103_1.7
+    stash:
+      - files: '**/*.zip'
+        id: 'packagezip'
+    environment:
+      maven_settings: "file: spring_{{country}}_{{group}}_settings_file"
+    steps:
+    - label: 'Build with maven'
+      bin: mvn
+      run: 'clean install -Dmaven.test.skip=false versions:set -DnewVersion={{version}}'
+      environment:
+        java_tool: "{{java}}"
+        maven_tool: "{{maven}}"
+
+    - label: 'Prepare artifacts'
+      bin: sh
+      run: |
+        rsync -aH EAR/target/mfsa_mult_web.ear artifacts/
+        cd artifacts
+        zip -r $WORKSPACE/{{artifact}} .
+
+  end:
+    steps:
+      - bin: groovy
+        run: |
+          def message = """
+            URL Artifactory: ${ y.artifact.getUploadUrl() }/${y.artifact.file.name}
+          """.trim()
+          z.banner('Resumen', message)

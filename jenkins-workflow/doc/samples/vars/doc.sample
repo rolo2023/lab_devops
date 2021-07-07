@@ -1,0 +1,21 @@
+# #MODULE_NAME#
+
+> TODO - Module description: what does it do? What does it need? etc...
+
+## Mandatory parameters
+
+> TODO - detailed list of mandatory parameters
+
+## Optional paramaters
+
+> TODO - detailed list of optional parameters - if any
+
+## Example
+
+```yml
+  use: '#MODULE_NAME#'
+  with_params:
+    param1: 'value1'
+    param2: 'value2'
+
+```

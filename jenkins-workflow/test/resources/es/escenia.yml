@@ -1,0 +1,202 @@
+verbosity: 1
+architecture: spring
+
+modules:
+
+  vtrack:
+    api: v0
+    debug: no
+    url: pro-etherification-apis-ALB-1836523592.eu-west-1.elb.amazonaws.com:8085
+    #url: dev-etherification-apis-alb-1168521633.eu-west-1.elb.amazonaws.com:8085
+
+  artifactory:
+    server_id: artifactoryServer
+    credentialsId: bot-arquitectura-spring
+
+  git:
+    credentialsId: bot-globaldevops-pro-ssh
+
+  bitbucket:
+    url: https://globaldevtools.bbva.com/bitbucket
+    credentialsId: TOKEN_API_BB
+    credential_type: string
+
+  ephemerals:
+    enabled: yes
+    test_job: 'Herramientas Testing/MAG TEST 2/mag-test/master'
+    mirroring_job: 'Herramientas Testing/MAG TEST 2/escenia-mirroring/master'
+    enabled_branches: [ 'PR', 'develop', 'master' ]
+    deploy_zip_branches: [ 'develop', 'master' ]
+    params: {}
+
+
+  dimensions:
+    enabled: yes
+    version: '1.1'
+    credentials_file: /us/xpjenk1/.config/dimensions.json
+    verbosity: 2
+    levels: [ 'NINGUNO', 'DESARROLLO', 'INTEGRADO', 'QA', 'AUS', 'PRODUCCION' ]
+    risk: 'BAJO'
+    country: ESPAÑA
+    petition: BANCA A DISTANCIA
+    database: bgestimp@bdime001
+    host: spdim001:672
+    pass_type: 'EVOLUTIVO'
+    title: "{{uuaa}}-{{version}} - Automatic PIMP from {{repo.project}}/{{repo.slug}} ({{branch}})"
+
+
+
+# Store configuration
+store:
+  module: artifactory
+  context: 'arquitectura-spring-{{architecture}}-apps-global-generic'
+  file:
+    path: "."
+    name: "{{uuaa}}-{{arifact.version}}.zip"
+  release:
+    any:
+      name: 'SNAPSHOT-{{branch}}-{{commit}}'
+      suffix: 'snapshots'
+      upload: yes
+    develop:
+      name: 'SNAPSHOT'
+      suffix: 'releases'
+      upload: yes
+    master:
+      name: "{{version}}"
+      suffix: 'releases'
+      upload: yes
+    PR:
+      name: "SNAPSHOT-{{commit}}"
+      suffix: 'snapshots'
+      upload: yes
+
+# Stages configuration
+stages:
+
+  prepare:
+    model: norelease
+    module: vtrack
+
+  build:
+    node_label: ldbad103-docker
+    stash:
+      - files: '**/*.zip'
+        id: 'packagezip'
+    keep:
+      branches: []
+      files: 'artifacts/*.*'
+      greedy: yes
+    environment:
+      maven_settings: 'file: settings_artifactory'
+
+    steps:
+    - label: 'Build with maven'
+      bin: mvn
+      run: 'clean install -P was -Dmaven.test.skip=true versions:set -DnewVersion={{version}}'
+      environment:
+        java_tool: "{{java}}"
+        maven_tool: "{{maven}}"
+    - label: 'Prepare artifacts'
+      bin: groovy
+      run: |
+        x.git (
+          url: 'ssh://git@globaldevtools.bbva.com:7999/bbvaeseccpdevops/prepare_artifacts_oficinas.git',
+          credentialsId: 'bot-globaldevops-pro-ssh',
+          branch: 'master'
+        )
+      environment:
+        workspace: '{{temp.scripts}}'
+
+    - label: 'Generate data.zip'
+      bin: sh
+      run: |
+        ARTIFACTS="${WORKSPACE}/artifacts"
+        [[ -f prepare_artifacts.sh ]] || cp "{{temp.scripts}}/prepare_artifacts.sh" ${WORKSPACE}
+        chmod +x prepare_artifacts.sh
+        ./prepare_artifacts.sh {{vars.prepare_artifacts_params}}
+        mkdir -p $ARTIFACTS && cd "${WORKSPACE}/artifacts"
+        zip -r ${WORKSPACE}/data.zip .
+
+
+    - label: 'Generate control.json'
+      bin: groovy
+      run: |
+        x.writeFile(file: 'control.json', encoding: "UTF-8", text: groovy.json.JsonOutput.toJson([
+            Version: y.version,
+            Author: x.env.CHANGE_AUTHOR,
+            Issue: "null",
+            Repository: x.env.GIT_URL,
+            Pull_Request: x.env.CHANGE_URL,
+            Commit_Hash: x.env.GIT_COMMIT,
+            Build_Job: x.env.BUILD_URL
+        ]))
+
+    - label: 'Generate control.zip'
+      bin: sh
+      run: zip -j ${WORKSPACE}/control.zip control.json control/*
+
+    - label: 'Set npm credentials for tests'
+      bin: sh
+      run: cp ${NPMRC} ~/.npmrc
+      credentials:
+        - type: file
+          name: bot-testing-art-npmrc
+          variable: NPMRC
+
+    - label: Generate test.zip
+      when:
+        condition: x.fileExists('test/pom.xml')
+        expected: true
+      bin: mvn
+      run: 'package -f test'
+      environment:
+        maven_tool: 'MVN3.3.9'
+        java_tool: 'JDK7'
+
+    - label: Generate test.zip
+      bin: sh
+      when:
+        condition: x.fileExists('test/pom.xml')
+        expected: false
+      run: mkdir -p "test/target" && touch "test/target/test.zip"
+
+    - label: Copy test.zip to workspace
+      bin: sh
+      run: cp "test/target/test.zip" "test.zip"
+
+    - label: 'Generate artifact file'
+      bin: sh
+      run: zip -r {{artifact}} control.zip test.zip data.zip
+
+
+  test:
+    node_label: maven-testing
+    module: ephemerals
+    environment:
+      npmrc_file_id: bot-testing-art-npmrc
+      java_tool: 'JDK7'
+      maven_tool: 'MVN3.3.9'
+      maven_settings: 'file: settings_artifactory'
+
+  deploy:
+    steps:
+      - when_branch: [ 'develop', 'master' ]
+        use: 'dimensions'
+        with_params:
+          node_label: ldbad103
+          environment:
+            http_proxy: 'PROXYVIP.IGRUPOBBVA:8080'
+          override:
+            develop:
+              risk: 'BAJO'
+              pass_type: 'EVOLUTIVO'
+
+  end:
+    steps:
+      - bin: groovy
+        run: |
+          def message = """
+            URL Artifactory: ${ y.artifact.getUploadUrl() }/${y.artifact.file.name}
+          """.trim()
+          z.banner('Resumen', message)
