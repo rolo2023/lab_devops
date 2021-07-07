@@ -1,7 +1,7 @@
 @Library ("workflow-spring") _
 spring {
   //group = "generic_maven_sftp"
-  revision = "master"
+  revision = "develop"
 
   //Diligenciar
   
@@ -11,7 +11,7 @@ spring {
     //build_settings_file: "spring_co_bonita_settings_file",
     //build_container: "maven-docker-testingnode",
     //build_pod_def: "pod_template_maven-docker-testingnode.yml",
-    sh "clean install " 
+    build_maven_goal: "clean install " 
    // build_include_files:" target/bonita-services-proxy.war" 
  ]
    
