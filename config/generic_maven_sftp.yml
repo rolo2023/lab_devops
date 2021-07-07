@@ -1,0 +1,18 @@
+modules:
+  git:
+
+  # artifactory:
+    # credentialsId: "spring_co_generic_maven_sftp_artifactory_token"
+  bitbucket:
+    credentialsId: "spring_co_bitbuket_token"
+stages:
+  build:
+    steps:
+      - use: "maven"
+        label: "Build"
+        with_params:
+          java_tool: "{{java}}"
+          maven_tool: "{{maven}}"
+          goal: "{{vars.build_maven_goal}}"
+          # maven_settings: "file: {{vars.build_settings_file}}"
+     
